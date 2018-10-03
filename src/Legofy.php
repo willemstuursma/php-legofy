@@ -75,14 +75,11 @@ class Legofy
         $image = ImageManagerStatic::make($resource);
 
         // Calculate how many bricks fit in the image
-        $amountOfBricksX = round($image->getWidth() * $resolutionMultipler / $this->brickWidth);
-        $amountOfBricksY = round($image->getHeight() * $resolutionMultipler / $this->brickHeight);
+        $amountOfBricksX = (int) round($image->getWidth() * $resolutionMultipler / $this->brickWidth);
+        $amountOfBricksY = (int) round($image->getHeight() * $resolutionMultipler / $this->brickHeight);
 
         // Resize to the rounded value relative to the brick size
-        $image->resize(
-            $amountOfBricksX * $this->brickWidth,
-            $amountOfBricksY * $this->brickHeight
-        );
+        $image->resize($amountOfBricksX, $amountOfBricksY);
 
         $canvas = ImageManagerStatic::canvas(
             $amountOfBricksX * $this->brickWidth,
@@ -91,11 +88,9 @@ class Legofy
 
         for ($x = 0; $x < $amountOfBricksX; ++$x) {
             for ($y = 0; $y < $amountOfBricksY; ++$y) {
-                $positionX = $x * $this->brickWidth;
-                $positionY = $y * $this->brickHeight;
 
                 /** @var AbstractColor $color */
-                $color = $this->pickAverageColor($image, $positionX, $positionY);
+                $color = $image->pickColor($x, $y, "object");
 
                 if ($legoColorsOnly) {
                     $color = $this->palette->pickClosestColor($color);
@@ -115,35 +110,9 @@ class Legofy
         return $canvas;
     }
 
-    private function pickAverageColor(Image $image, int $positionX, int $positionY): AbstractColor {
-
-        $reds = $greens = $blues = [];
-
-        for ($brickX = 4; $brickX <= $this->brickWidth - 4; $brickX += 2) { // takes pixels 4, 6, 8, 12
-            for ($brickY = 4; $brickY <= $this->brickHeight - 4; $brickY += 2) { // takes pixels 4, 6, 8, 12
-                [$red, $green, $blue] = $image->pickColor($positionX + $brickX, $positionY + $brickY);
-
-                $reds[]   = $red;
-                $greens[] = $green;
-                $blues[]  = $blue;
-            }
-        }
-
-        /** @var AbstractColor $color */
-        $color = $image->pickColor(0, 0, "object");
-
-        $color->initFromRgb(
-            (int) array_sum($reds) / count($reds),
-            (int) array_sum($greens) / count($greens),
-            (int) array_sum($blues) / count($blues)
-        );
-
-        return $color;
-    }
-
     private function getAverageBrickColor(): AbstractColor
     {
-        if (false === is_null($this->brickAverageColor)) {
+        if (null !== $this->brickAverageColor) {
             return $this->brickAverageColor;
         }
 
